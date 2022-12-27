@@ -64,6 +64,22 @@ pub struct Song {
     pub hash: String,
     #[serde(alias = "songName")]
     pub name: String,
+    pub key: Option<String>,
+}
+
+pub fn read_bplist(path: &str) -> Option<Playlist> {
+    if let Ok(string) = fs::read_to_string(path) {
+        match serde_json::from_str::<Playlist>(&string) {
+            Ok(result) => Some(result),
+            Err(_) => {
+                println!("Failed to deserialize {path}");
+                None
+            }
+        }
+    } else {
+        println!("Failed to read {path}");
+        None
+    }
 }
 
 pub fn get_device_folder() -> String {
