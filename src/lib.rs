@@ -62,8 +62,9 @@ pub struct Playlist {
 #[derive(Deserialize, Serialize, Default)]
 pub struct Song {
     pub hash: String,
-    #[serde(alias = "songName")]
+    #[serde(rename = "songName")]
     pub name: String,
+    #[serde(skip_serializing)]
     pub key: Option<String>,
 }
 
@@ -80,6 +81,21 @@ pub fn read_bplist(path: &str) -> Option<Playlist> {
         println!("Failed to read {path}");
         None
     }
+}
+
+pub fn get_existing_song_hashes() -> Vec<String> {
+    let path = format!("{}/{}{}", BASE_PATH, get_device_folder(), SONGS_PATH);
+    let mut result = Vec::<String>::new();
+
+    if let Ok(dir) = fs::read_dir(path) {
+        dir.flatten().for_each(|entry| {
+            if let Some(hash) = entry.file_name().to_str() {
+                result.push(hash.to_owned());
+            }
+        });
+    };
+
+    result
 }
 
 pub fn get_device_folder() -> String {
@@ -164,6 +180,17 @@ pub fn save_modified_playlists(playlists: &[Playlist]) {
                 Err(_) => println!("Can't create playlist file."),
             }
         });
+}
+
+pub fn save_playlist(playlist: &Playlist, path: &str) {
+    serde_json::to_string::<Playlist>(playlist)
+        .ok()
+        .zip(File::create(path).ok())
+        .and_then(|(string, mut file)| file.write_all(string.as_bytes()).ok())
+        .map_or_else(
+            || println!("Failed to save playlist {}", path),
+            |_| println!("Playlist saved to {}", path),
+        );
 }
 
 pub fn is_playlist_contains_song(playlist: &Playlist, song: Song) -> bool {
